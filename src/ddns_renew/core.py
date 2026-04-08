@@ -82,11 +82,7 @@ def confirm_host(host_id, proxy_url=None):
         except Exception as e:
             print(f"An error occurred: {str(e)}")
         finally:
-            # Gracefully close the browser context before exiting Python
+            # Gracefully close the browser context before exiting
             browser.close()
 
-    # Exit with the proper status code after Playwright has cleanly shut down
-    if success:
-        sys.exit(0)
-    else:
-        sys.exit(1)
+    return success

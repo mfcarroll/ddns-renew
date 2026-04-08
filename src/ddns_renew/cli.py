@@ -29,7 +29,12 @@ def main():
         )
         sys.exit(1)
 
-    confirm_host(host_id, proxy_url)
+    success = confirm_host(host_id, proxy_url)
+
+    if success:
+        sys.exit(0)
+    else:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
