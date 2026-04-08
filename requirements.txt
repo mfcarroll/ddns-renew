@@ -1,4 +1,0 @@
-playwright-recaptcha==0.5.1
-python-dotenv==1.2.2
-standard-aifc; python_version>='3.13'
-audioop-lts; python_version>='3.13'

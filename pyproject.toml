@@ -1,0 +1,20 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "ddns-renew"
+version = "1.0.0"
+description = "Auto-renew No-IP DDNS hostnames using Playwright."
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "playwright-recaptcha==0.5.1",
+    "python-dotenv==1.2.2",
+    "standard-aifc; python_version>='3.13'",
+    "audioop-lts; python_version>='3.13'"
+]
+
+[project.scripts]
+# This creates the semantic terminal command
+ddns-renew = "ddns_renew.cli:main"

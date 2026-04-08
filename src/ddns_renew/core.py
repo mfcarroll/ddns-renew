@@ -1,17 +1,12 @@
-import os
 import sys
-import argparse
 from urllib.parse import urlparse
-from dotenv import load_dotenv
+import os
 from playwright.sync_api import (
     sync_playwright,
     ProxySettings,
     TimeoutError as PlaywrightTimeoutError,
 )
 from playwright_recaptcha import recaptchav2
-
-# Load environment variables from a .env file if it exists
-load_dotenv()
 
 
 def confirm_host(host_id, proxy_url=None):
@@ -95,29 +90,3 @@ def confirm_host(host_id, proxy_url=None):
         sys.exit(0)
     else:
         sys.exit(1)
-
-
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Auto-renew No-IP DDNS hostname.")
-    parser.add_argument(
-        "host_id",
-        nargs="?",
-        help="The No-IP confirmation host ID (the 'n' parameter in the URL).",
-    )
-    parser.add_argument(
-        "--proxy_url",
-        help="Proxy URL in the format http://USERNAME:PASSWORD@HOST:PORT/",
-    )
-    args = parser.parse_args()
-
-    # Fall back to environment variables if no command-line argument is provided
-    host_id = args.host_id or os.environ.get("NOIP_HOST_ID")
-    proxy_url = args.proxy_url or os.environ.get("PROXY_URL")
-
-    if not host_id:
-        print(
-            "Error: You must provide a host ID either as a command-line argument or via the NOIP_HOST_ID environment variable."
-        )
-        sys.exit(1)
-
-    confirm_host(host_id, proxy_url)
