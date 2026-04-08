@@ -3,7 +3,11 @@ import sys
 import argparse
 from urllib.parse import urlparse
 from dotenv import load_dotenv
-from playwright.sync_api import sync_playwright, ProxySettings
+from playwright.sync_api import (
+    sync_playwright,
+    ProxySettings,
+    TimeoutError as PlaywrightTimeoutError,
+)
 from playwright_recaptcha import recaptchav2
 
 # Load environment variables from a .env file if it exists
@@ -12,10 +16,10 @@ load_dotenv()
 
 def confirm_host(host_id, proxy_url=None):
     target_url = f"https://www.noip.com/confirm-host?n={host_id}"
-    
+
     # Parse the proxy URL into Playwright's required dictionary format
     proxy_settings: ProxySettings | None = None
-    
+
     if proxy_url:
         parsed_proxy = urlparse(proxy_url)
         proxy_settings = {
@@ -27,9 +31,15 @@ def confirm_host(host_id, proxy_url=None):
             proxy_settings["password"] = parsed_proxy.password
         print(f"Using Proxy: {proxy_settings['server']}")
 
+    # Check environment for HEADLESS toggle (Defaults to True)
+    headless_mode = os.environ.get("HEADLESS", "True").lower() == "true"
+
+    # Track success state for a graceful exit
+    success = False
+
     with sync_playwright() as p:
-        # Launch Chromium with the proxy settings (if any are provided)
-        browser = p.chromium.launch(headless=True, proxy=proxy_settings)
+        # Launch Chromium with the proxy settings and headless toggle
+        browser = p.chromium.launch(headless=headless_mode, proxy=proxy_settings)
         context = browser.new_context(
             user_agent="Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/146.0.0.0 Safari/537.36"
         )
@@ -48,10 +58,13 @@ def confirm_host(host_id, proxy_url=None):
             # ---------------------------
 
             print("Waiting for reCAPTCHA and attempting to solve...")
-            with recaptchav2.SyncSolver(page) as solver:
-                solver.solve_recaptcha(wait=True)
-
-            print("reCAPTCHA solved successfully.")
+            try:
+                with recaptchav2.SyncSolver(page) as solver:
+                    solver.solve_recaptcha(wait=True)
+                print("reCAPTCHA solved successfully.")
+            except Exception as e:
+                print(f"reCAPTCHA solving failed or timed out: {e}")
+                # We log the error but continue, just in case the button is still clickable.
 
             # Find the button by its exact text
             submit_button = page.locator('button:has-text("Confirm your hostname now")')
@@ -67,16 +80,21 @@ def confirm_host(host_id, proxy_url=None):
                 # Wait up to 15 seconds for the success message to appear
                 success_message.wait_for(state="visible", timeout=15000)
                 print("Success! Host confirmed.")
-                sys.exit(0)
-            except Exception:
+                success = True
+            except PlaywrightTimeoutError:
                 print("Failed to confirm host or timed out waiting for success page.")
-                sys.exit(1)
 
         except Exception as e:
             print(f"An error occurred: {str(e)}")
-            sys.exit(1)
         finally:
+            # Gracefully close the browser context before exiting Python
             browser.close()
+
+    # Exit with the proper status code after Playwright has cleanly shut down
+    if success:
+        sys.exit(0)
+    else:
+        sys.exit(1)
 
 
 if __name__ == "__main__":
